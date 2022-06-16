@@ -47,9 +47,7 @@ class GoogleSignInAccount implements GoogleIdentity {
         id = data.id,
         photoUrl = data.photoUrl,
         serverAuthCode = data.serverAuthCode,
-        _idToken = data.idToken {
-    assert(id != null);
-  }
+        _idToken = data.idToken;
 
   // These error codes must match with ones declared on Android and iOS sides.
 
@@ -92,7 +90,7 @@ class GoogleSignInAccount implements GoogleIdentity {
       throw StateError('User is no longer signed in.');
     }
 
-    final GoogleSignInTokenData response =
+    final response =
         await GoogleSignInPlatform.instance.getTokens(
       email: email,
       shouldRecoverAuth: true,
@@ -110,7 +108,7 @@ class GoogleSignInAccount implements GoogleIdentity {
   ///
   /// See also https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization.
   Future<Map<String, String>> get authHeaders async {
-    final String? token = (await authentication).accessToken;
+    final token = (await authentication).accessToken;
     return <String, String>{
       'Authorization': 'Bearer $token',
       // TODO(kevmoo): Use the correct value once it's available from authentication
@@ -124,7 +122,7 @@ class GoogleSignInAccount implements GoogleIdentity {
   /// If client runs into 401 errors using a token, it is expected to call
   /// this method and grab `authHeaders` once again.
   Future<void> clearAuthCache() async {
-    final String token = (await authentication).accessToken!;
+    final token = (await authentication).accessToken!;
     await GoogleSignInPlatform.instance.clearAuthCache(token: token);
   }
 
@@ -136,7 +134,7 @@ class GoogleSignInAccount implements GoogleIdentity {
     if (other is! GoogleSignInAccount) {
       return false;
     }
-    final GoogleSignInAccount otherAccount = other;
+    final otherAccount = other;
     return displayName == otherAccount.displayName &&
         email == otherAccount.email &&
         id == otherAccount.id &&
@@ -151,7 +149,7 @@ class GoogleSignInAccount implements GoogleIdentity {
 
   @override
   String toString() {
-    final Map<String, dynamic> data = <String, dynamic>{
+    final data = <String, dynamic>{
       'displayName': displayName,
       'email': email,
       'id': id,
@@ -277,7 +275,7 @@ class GoogleSignIn {
   /// Returns a [Future] that completes with a success after [future], whether
   /// it completed with a value or an error.
   static Future<void> _waitFor(Future<void> future) {
-    final Completer<void> completer = Completer<void>();
+    final completer = Completer<void>();
     future.whenComplete(completer.complete).catchError((dynamic _) {
       // Ignore if previous call completed with an error.
       // TODO(ditman): Should we log errors here, if debug or similar?
@@ -357,8 +355,12 @@ class GoogleSignIn {
 
   /// Returns a future that resolves to whether a user is currently signed in.
   Future<bool> isSignedIn() async {
-    await _ensureInitialized();
-    return GoogleSignInPlatform.instance.isSignedIn();
+    try {
+      await _ensureInitialized();
+      return GoogleSignInPlatform.instance.isSignedIn();
+    } catch (e) {
+      return false;
+    }
   }
 
   /// Starts the interactive sign-in process.
@@ -371,12 +373,17 @@ class GoogleSignIn {
   /// a Future which resolves to the same user instance.
   ///
   /// Re-authentication can be triggered only after [signOut] or [disconnect].
-  Future<GoogleSignInAccount?> signIn() {
-    final Future<GoogleSignInAccount?> result =
-        _addMethodCall(GoogleSignInPlatform.instance.signIn, canSkipCall: true);
-    bool isCanceled(dynamic error) =>
-        error is PlatformException && error.code == kSignInCanceledError;
-    return result.catchError((dynamic _) => null, test: isCanceled);
+  Future<GoogleSignInAccount?>? signIn() {
+    try {
+      final result =
+      _addMethodCall(GoogleSignInPlatform.instance.signIn, canSkipCall: true);
+      return result;
+    }catch(_){
+      return null;
+    }
+    // bool isCanceled(dynamic error) =>
+    //     error is PlatformException && error.code == kSignInCanceledError;
+    // return result.catchError((dynamic _) => null, test: isCanceled);
   }
 
   /// Marks current user as being in the signed out state.
